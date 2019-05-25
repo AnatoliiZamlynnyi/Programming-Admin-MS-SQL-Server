@@ -1,0 +1,10 @@
+1. git bash - встановити
+2. створити порожній репозиторій
+3. скопіювати ссилку http
+4. ідем в проводнік натискаємо папку ПКМ git bash here +gitignore
+5. git clone http://
+6. попрацювали
+7.  git status
+git add .
+git commit -m " bdfbdfb  "
+git push origin master
