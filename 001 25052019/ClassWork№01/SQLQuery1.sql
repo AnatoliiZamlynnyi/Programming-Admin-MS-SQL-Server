@@ -1,4 +1,4 @@
------------DDM-------------
+-----------DDL-------------
 create database TestZaml --створити базу
 use TestZaml --перейти в базу
 use master
