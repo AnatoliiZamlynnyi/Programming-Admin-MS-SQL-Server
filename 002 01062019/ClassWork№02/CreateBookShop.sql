@@ -76,6 +76,8 @@ Go
 INSERT INTO Country Values
 ('China'),
 ('Poland'),
+('USA'),
+('Russia'),
 ('Ukraine');
 
 Go
@@ -86,11 +88,14 @@ INSERT INTO Address VALUES
 ('Mury','Rivne',(SELECT Id FROM Country WHERE CountryName='Ukraine')),
 ('Soborna','Rivne',(SELECT Id FROM Country WHERE CountryName='Ukraine')),
 ('Hrescharuk','Kyiv',(SELECT Id FROM Country WHERE CountryName='Ukraine')),
+('13 street','New-York',(SELECT Id FROM Country WHERE CountryName='USA')),
+('Polevaya','St. Petersburg',(SELECT Id FROM Country WHERE CountryName='Russia')),
 ('Cisy','Ninbo',(SELECT Id FROM Country WHERE CountryName='China'));
 
 INSERT INTO Publish VALUES
 ('CoolPublisher',(SELECT Id FROM Country WHERE CountryName='Poland')),
 ('ZirkaBook',(SELECT Id FROM Country WHERE CountryName='Ukraine')),
+('Williams',(SELECT Id FROM Country WHERE CountryName='USA')),
 ('Ababagalamaga',(SELECT Id FROM Country WHERE CountryName='Ukraine'));
 
 INSERT INTO Author VALUES
@@ -100,7 +105,9 @@ INSERT INTO Author VALUES
 ('Kleinman Paul',(SELECT Id FROM Address WHERE Street='Mury'),(SELECT Id FROM Publish WHERE PublishName='ZirkaBook')),
 ('Andersen Hans Christian',(SELECT Id FROM Address WHERE Street='Mury'),(SELECT Id FROM Publish WHERE PublishName='ZirkaBook')),
 ('Denisova Mila',(SELECT Id FROM Address WHERE Street='Bednarska'),(SELECT Id FROM Publish WHERE PublishName='CoolPublisher')),
+('Bortnik Olga',(SELECT Id FROM Address WHERE Street='Polevaya'),(SELECT Id FROM Publish WHERE PublishName='Ababagalamaga')),
 ('Romanova Maria',(SELECT Id FROM Address WHERE Street='Bednarska'),(SELECT Id FROM Publish WHERE PublishName='CoolPublisher')),
+('Ratbon Andy',(SELECT Id FROM Address WHERE Street='13 street'),(SELECT Id FROM Publish WHERE PublishName='Williams')),
 ('Scott Rob',(SELECT Id FROM Address WHERE Street='Gdanska'),(SELECT Id FROM Publish WHERE PublishName='CoolPublisher'));
 
 INSERT INTO UserProfile VALUES
@@ -118,15 +125,18 @@ INSERT INTO Category VALUES
 INSERT INTO Book VALUES
 (N'Роксолана', NULL, 800, 120, '02/10/2013',(select Id from Author where AuthorName='Zagrebelnyj Pavel'), (select Id from Category where CategotyName='Historical')),
 (N'Володимир',NULL,528,28.50,'01/05/2010',(select Id from Author where AuthorName='Semen Sklyarenko'),(select Id from Category where CategotyName='Historical')),
-(N'Ярослав',NULL,576,222,'02/06/2015',(select Id from Author where AuthorName='Zagrebelnyj Pavel'),(select Id from Category where CategotyName='Historical')),
+(N'Ярослав',NULL,576,422,'02/06/2015',(select Id from Author where AuthorName='Zagrebelnyj Pavel'),(select Id from Category where CategotyName='Historical')),
 (N'Ігри у які грають люди',NULL,256,84.90,'09/05/2016',(select Id from Author where AuthorName='Bern Eric'),(select Id from Category where CategotyName='Adult')),
-(N'Психологічний помічник',N'Психологія101',240,120.5,'01/01/2016',(select Id from Author where AuthorName='Kleinman Paul'),(select Id from Category where CategotyName='Scientific')),
+(N'Психологічний помічник',N'Психологія101',340,120.5,'01/01/2016',(select Id from Author where AuthorName='Kleinman Paul'),(select Id from Category where CategotyName='Scientific')),
 (N'Снежная королева',N'Сказка',64,125,'01/02/2018',(select Id from Author where AuthorName='Andersen Hans Christian'),(select Id from Category where CategotyName='Childrens')),
-(N'Белий мишка',N'Сказка',6,84,'05/10/2015',(select Id from Author where AuthorName='Denisova Mila'),(select Id from Category where CategotyName='Childrens')),
-(N'Милашки-очаровашки',N'Миниатюрная книжка «Белый мишка» серии «Милашки-очаровашки» создана специально для самых маленьких читателей.',10,114,'08/11/2015',(select Id from Author where AuthorName='Romanova Maria'),(select Id from Category where CategotyName='Childrens')),
-(N'Шмяк и пингвины',N'Котенок Шмяк и его друзья живут весело. ',40,196,'05/11/2015',(select Id from Author where AuthorName='Scott Rob'),(select Id from Category where CategotyName='Childrens')),
+(N'Белий мишка',N'Сказка',NULL,84,'05/10/2015',(select Id from Author where AuthorName='Denisova Mila'),(select Id from Category where CategotyName='Childrens')),
+(N'Милашки-очаровашки',N'Миниатюрная книжка «Белый мишка» серии «Милашки-очаровашки» создана специально для самых маленьких читателей.',NULL,114,'08/11/2015',(select Id from Author where AuthorName='Romanova Maria'),(select Id from Category where CategotyName='Childrens')),
+(N'Шмяк и пингвины',N'Котенок Шмяк и его друзья живут весело. ',40,396,'05/11/2015',(select Id from Author where AuthorName='Scott Rob'),(select Id from Category where CategotyName='Childrens')),
+(N'Изучаем Microsoft Office',NULL,32,85,'05/06/2009',(select Id from Author where AuthorName='Bortnik Olga'),(select Id from Category where CategotyName='Scientific')),
 (N'Рассел ищет клад',N'Что вас ждет под обложкой: Однажды ворона принесла Расселу изрядно потрепанную карту сокровищ Лягушачьей низины. ',32,209,'02/09/2015',(select Id from Author where AuthorName='Scott Rob'),(select Id from Category where CategotyName='Childrens')),
-(N'Котенок Шмяк. Давай играть!',N'Наконец-то к котёнку Шмяку в гости пришли друзья, и можно вместе поиграть.',32,137.5,'09/05/2015',(select Id from Author where AuthorName='Scott Rob'),(select Id from Category where CategotyName='Childrens'));
+(N'Котенок Шмяк. Давай играть!',N'Наконец-то к котёнку Шмяку в гости пришли друзья, и можно вместе поиграть.',32,137.5,'09/05/2015',(select Id from Author where AuthorName='Scott Rob'),(select Id from Category where CategotyName='Childrens')),
+(N'Windows для чайников',NULL,416,99.99,'01/01/2003',(select Id from Author where AuthorName='Ratbon Andy'),(select Id from Category where CategotyName='Scientific'));
+
 
 INSERT INTO Shop VALUES
 ('PolandShop',2),
@@ -134,22 +144,30 @@ INSERT INTO Shop VALUES
 
 INSERT INTO Incomes VALUES
 (1,(SELECT Id FROM Book where BookName=N'Котенок Шмяк. Давай играть!'),'01/09/2015',20),
-(2,(SELECT Id FROM Book where BookName=N'Ігри у які грають люди'),'12/07/2016',20),
-(1,(SELECT Id FROM Book where BookName=N'Володимир'),'01/08/2010',10),
-(2,(SELECT Id FROM Book where BookName=N'Ярослав'),'03/09/2015',5),
-(2,(SELECT Id FROM Book where BookName=N'Снежная королева'),'05/04/2018',7),
+(2,(SELECT Id FROM Book where BookName=N'Ігри у які грають люди'),'12/05/2019',20),
+(1,(SELECT Id FROM Book where BookName=N'Ігри у які грають люди'),'12/05/2019',10),
+(1,(SELECT Id FROM Book where BookName=N'Володимир'),'01/01/2009',10),
+(2,(SELECT Id FROM Book where BookName=N'Ярослав'),'03/12/2008',5),
+(1,(SELECT Id FROM Book where BookName=N'Изучаем Microsoft Office'),'25/03/2010',86),
+(2,(SELECT Id FROM Book where BookName=N'Снежная королева'),'05/04/2019',7),
 (2,(SELECT Id FROM Book where BookName=N'Психологічний помічник'),'05/08/2016',15),
 (2,(SELECT Id FROM Book where BookName=N'Белий мишка'),'04/12/2015',30),
+(1,(SELECT Id FROM Book where BookName=N'Windows для чайников'),'25/03/2006',86),
+(2,(SELECT Id FROM Book where BookName=N'Windows для чайников'),'25/03/2006',5),
 (2,(SELECT Id FROM Book where BookName=N'Рассел ищет клад'),'01/12/2015',5),
-(2,(SELECT Id FROM Book where BookName=N'Шмяк и пингвины'),'01/02/2016',7),
+(2,(SELECT Id FROM Book where BookName=N'Шмяк и пингвины'),'01/02/2019',7),
 (2,(SELECT Id FROM Book where BookName=N'Милашки-очаровашки'),'12/01/2016',15),
-(2,(SELECT Id FROM Book where BookName=N'Роксолана'),'10/12/2013',30);
+(2,(SELECT Id FROM Book where BookName=N'Роксолана'),'23/02/2009',30);
 
 INSERT INTO Sales VALUES
 (1,(SELECT Id FROM Book where BookName=N'Шмяк и пингвины'),'02/10/2017',99,99),
 (2,(SELECT Id FROM Book where BookName=N'Ігри у які грають люди'),'05/05/2019',5,49.5),
+(1,(SELECT Id FROM Book where BookName=N'Ігри у які грають люди'),'05/05/2019',2,49.5),
 (2,(SELECT Id FROM Book where BookName=N'Белий мишка'),'02/04/2018',3,25.3),
+(2,(SELECT Id FROM Book where BookName=N'Windows для чайников'),'25/12/2006',10,99.99),
 (2,(SELECT Id FROM Book where BookName=N'Рассел ищет клад'),'03/05/2019',2,149.99),
+(1,(SELECT Id FROM Book where BookName=N'Windows для чайников'),'25/12/2008',23,99.99),
+(1,(SELECT Id FROM Book where BookName=N'Изучаем Microsoft Office'),'03/05/2011',2,149.99),
 (2,(SELECT Id FROM Book where BookName=N'Роксолана'),'05/05/2019',7,89.99),
 (2,(SELECT Id FROM Book where BookName=N'Снежная королева'),'07/01/2019',10,77.55);
 -------------------------------------

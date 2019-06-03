@@ -1,3 +1,4 @@
+USE BookShopPublisherZam;
 --на 8
 --1. Создать запрос на выборку всей информации о продажах книг в магазинах. 
 SELECT *FROM Sales;
@@ -6,47 +7,91 @@ SELECT Book.BookName FROM Book WHERE Book.NumberPages IS NULL;
 --3. Создать запрос на выборку информации о авторах, а именно их названия и полный адрес. 
 --Адрес вывести в одном поле (отформатировать вывод). 
 SELECT Author.AuthorName, Country.CountryName+', City '+ Address.City+', str. '+Address.Street  
-	FROM (Author LEFT OUTER JOIN Address on Author.AddressId=Address.Id)
-	LEFT OUTER JOIN Country on Address.CountryId=Country.Id;
+	FROM (Author LEFT OUTER JOIN Address ON Author.AddressId=Address.Id)
+	LEFT OUTER JOIN Country ON Address.CountryId=Country.Id;
 --4. Вывести информацию о том, каких именно книг было продано более 10 в промежутке от 01/12/2008 до 01/03/2009. 
 SELECT *FROM Book, Sales WHERE Sales.BookId=Book.Id AND Sales.Amount>10 AND Sales.DateSale BETWEEN '20081201' AND '20090301';
 --5. Вывести названия книг которые продавались в течение последнего месяца (без повторений). 
 --Примечание! Для получения информации о текущем месяце следует воспользоваться необходимыми функциями. 
-SELECT Book.BookName, Sales.DateSale FROM Book, Sales  WHERE Sales.BookId=Book.Id AND Sales.DateSale>DateAdd("D", -30, GETDATE());
+SELECT DISTINCT Book.BookName, Sales.DateSale FROM Book, Sales  WHERE Sales.BookId=Book.Id AND Sales.DateSale>DateAdd("D", -30, GETDATE());
 --6. Вывести на экран количество старых книг в магазине, то есть книг, которые были поставлены до 2019 года
 SELECT SUM(Incomes.Amount) FROM Incomes  WHERE YEAR([DateIncomes])<2019;
 --7. Подсчитать общее количество книг двух авторов например Иванов и Воробей. (любые ваши)
-SELECT COUNT(*) FROM Book WHERE Book.AuthorId=(SELECT Id FROM Author WHERE  Author.AuthorName='Romanova Maria') or Book.AuthorId=(SELECT Id FROM Author WHERE  Author.AuthorName='Scott Rob');
+SELECT COUNT(*) FROM Book WHERE Book.AuthorId=(SELECT Id FROM Author WHERE  Author.AuthorName='Romanova Maria') OR Book.AuthorId=(SELECT Id FROM Author WHERE  Author.AuthorName='Scott Rob');
 --8. Показать все книги, в которых количество страниц больше 500, но меньше 650.
-SELECT Book.BookName, Book.NumberPages From Book WHERE Book.NumberPages BETWEEN 501 AND 649;
+SELECT Book.BookName, Book.NumberPages FROM Book WHERE Book.NumberPages BETWEEN 501 AND 649;
 --9. Показать количество авторов в базе данных. 
 SELECT COUNT(*) FROM Author;
 --10. Вывести всю информацию о работе магазинов: что, когда, сколько и кем было продано, а также указать страну, 
 --где находится магазин.
 SELECT Book.BookName, Sales.DateSale, Sales.Amount, Shop.ShopName, Country.CountryName  
-	FROM ((Book RIGHT OUTER JOIN Sales on Sales.BookId=Book.Id)
-	LEFT OUTER JOIN Shop on Sales.ShopId=Shop.Id)
-	LEFT OUTER JOIN Country on Shop.CountryId=Country.Id;
+	FROM ((Book RIGHT OUTER JOIN Sales ON Sales.BookId=Book.Id)
+	LEFT OUTER JOIN Shop ON Sales.ShopId=Shop.Id)
+	LEFT OUTER JOIN Country ON Shop.CountryId=Country.Id;
 
 --на 10 (все предыдущие плюс)
 --11. Подсчитать и вывести информацию об общем количестве продаж на каждый день и вывести их в убывающем порядке количества продаж. 
+SELECT Sales.DateSale, SUM(Sales.Amount) AS [Count Sales] FROM Sales
+	GROUP BY Sales.DateSale
+	ORDER BY SUM(Sales.Amount) DESC;
 --12. Вывести названия товаров автора Иванов(выбррать любого), которые продавались более чем в двух магазинах. 
---13. Вывести информацию о издательствах, страны их расположения, 
---количество книг которые издавались. 
+SELECT Book.BookName, Author.AuthorName, Shop.ShopName  
+	FROM Book, Author, Sales, Shop WHERE Author.AuthorName='Ratbon Andy' AND Book.AuthorId=Author.Id AND Sales.BookId=Book.Id AND Sales.ShopId=Shop.Id
+	GROUP BY Author.AuthorName, Book.BookName, Shop.ShopName;
+--13. Вывести информацию о издательствах, страны их расположения, количество книг которые издавались. 
+SELECT Publish.PublishName, Country.CountryName, COUNT(*) AS [Count Book publish] FROM ((Publish LEFT OUTER JOIN Country ON Publish.CountryId=Country.Id)
+	LEFT OUTER JOIN Author ON Author.PublishId=Publish.Id)
+	LEFT OUTER JOIN Book ON Book.AuthorId=Author.Id
+	GROUP BY Publish.PublishName, Country.CountryName;
 --14. Вычислить и вывести количество книг каждой категории, которые необходимо списать. К списанию подлежат книги,
 --которые есть в наличии в магазине и не продавались с даты их поставки в течение 3 месяцев. (есть в наличии - смотрим по таблице Incomes - если поставлялись, значит есть в наличии)
+SELECT Category.CategotyName, SUM(Incomes.Amount) AS [Books for writing off]
+	FROM ((Incomes LEFT OUTER JOIN Book ON Incomes.BookId=Book.Id) 
+	LEFT OUTER JOIN Category ON Book.CategoryId=Category.Id)
+	WHERE Incomes.DateIncomes<DateAdd("M", -3, GETDATE())
+	GROUP BY Category.CategotyName;
 --15. Вывести на экран количество поставленых книг по каждой категории, при этом учитывать только книги,
 --стоимость которых превышает 300 грн. Выведеная информация должна касаться только трех авторов - Иванов, Петров, Сидоров
+SELECT Category.CategotyName, SUM(Incomes.Amount) AS [Books Incomes]
+	FROM (((Incomes LEFT OUTER JOIN Book ON Incomes.BookId=Book.Id) 
+	LEFT OUTER JOIN Category ON Book.CategoryId=Category.Id)
+	LEFT OUTER JOIN Author ON Book.AuthorId=Author.Id)
+	WHERE Book.Price>300 AND (Author.AuthorName='Scott Rob' OR Author.AuthorName='Zagrebelnyj Pavel' OR Author.AuthorName='Ratbon Andy')
+	GROUP BY Category.CategotyName;
 --16. Показать категорию, товаров которой в магазине находится меньше всего.
---17. Необходимо вывести все названия книг, в которых первая буква или А, или С. 
+SELECT TOP(1) Category.CategotyName, SUM(Incomes.Amount) AS [Books Incomes]
+	FROM (((Incomes LEFT OUTER JOIN Book ON Incomes.BookId=Book.Id) 
+	LEFT OUTER JOIN Category ON Book.CategoryId=Category.Id)
+	LEFT OUTER JOIN Author ON Book.AuthorId=Author.Id)
+	GROUP BY Category.CategotyName
+	ORDER BY SUM(Incomes.Amount);
+--17. Необходимо вывести все названия книг, в которых первая буква или А, или С.
+SELECT Book.BookName FROM Book WHERE Book.BookName LIKE 'Р%' OR Book.BookName LIKE 'С%'
 --18. Показать названия книг, тематика которых не "Science Fiction" и тираж которых >=20 экземпляров. 
+SELECT Book.BookName, Category.CategotyName, Incomes.Amount  
+	FROM Book, Category, Incomes WHERE Category.CategotyName<>'Historical' AND Incomes.Amount>=20 AND Book.CategoryId=Category.ID AND Incomes.BookId=Book.Id
+	GROUP BY Book.BookName, Category.CategotyName, Incomes.Amount;
 --19. Показать все книги-новинки, цена которых ниже $30. 
 --(Новинкой будет считаться книга, которая была издана на протяжении последней недели). 
+SELECT Book.BookName, Book.PublishDate, Book.Price/26.63 AS [Price $] FROM Book WHERE Book.PublishDate>DateAdd("D", -7, GETDATE()) AND (Book.Price/26.63)<30;
 --20. Показать книги, в названиях которых есть слово "Microsoft", но нет слова "Windows". 
+SELECT *FROM Book WHERE Book.BookName LIKE '%Microsoft%' AND Book.BookName NOT LIKE'%Windows%';
 --21. Вывести названия книг, тематику, автора (полное имя), цена одной страницы которых менее 10 центов. 
+SELECT Book.BookName, Category.CategotyName, Author.AuthorName, (Book.Price/Book.NumberPages)/26.63 as [The cost of page $]
+	FROM (((Incomes LEFT OUTER JOIN Book ON Incomes.BookId=Book.Id) 
+	LEFT OUTER JOIN Category ON Book.CategoryId=Category.Id)
+	LEFT OUTER JOIN Author ON Book.AuthorId=Author.Id)
+	WHERE ((Book.Price/Book.NumberPages)/26.63)<0.10
+	GROUP BY Book.BookName, Category.CategotyName, Author.AuthorName, (Book.Price/Book.NumberPages)/26.63;
 --22. Вывести информацию обо всех книгах, в имени которых больше 4-х слов. 
+SELECT Book.BookName FROM Book WHERE LEN(Book.BookName)-LEN(REPLACE(Book.BookName, ' ', ''))+1>4;
 --23. Вывести на экран все книги, их авторов и цены их продажи в у.е., 
 --дата продажи которых находится в диапазоне 01/01/2007 по сегодняшнюю дату. 
+SELECT Book.BookName, Author.AuthorName, Sales.SalePrice/29.60
+	FROM ((Book LEFT OUTER JOIN  Author ON Book.AuthorId=Author.Id)
+	RIGHT OUTER JOIN Sales ON Sales.BookId=Book.Id)
+	WHERE Sales.DateSale>'20070101'
+	GROUP BY Book.BookName, Author.AuthorName, Sales.SalePrice;
 --24. Показать всю информацию по продажам книг в следующем виде: 
 --¦ название книги;
 --¦ тематик, которые касаются "Computer Science"; 
@@ -54,13 +99,28 @@ SELECT Book.BookName, Sales.DateSale, Sales.Amount, Shop.ShopName, Country.Count
 --¦ цена продажи книги; 
 --¦ имеющееся количество продаж данной книги; 
 --¦ название магазина, который находится не в Украине и не в Канаде и продает эту книгу. 
+SELECT Book.BookName, Book.Description, Author.AuthorName, Sales.SalePrice, Sales.Amount AS [Count sales], Shop.ShopName
+	FROM (((Book LEFT OUTER JOIN  Author ON Book.AuthorId=Author.Id)
+	RIGHT OUTER JOIN Sales ON Sales.BookId=Book.Id)
+	LEFT OUTER JOIN Shop ON Sales.ShopId=Shop.Id)
+	WHERE Book.Description='Навчальний посібник' AND (Shop.CountryId<>5 AND Shop.CountryId<>6)
+	GROUP BY Book.BookName, Book.Description, Author.AuthorName, Sales.SalePrice, Sales.Amount, Shop.ShopName;
 
 --на 12 (все предыдущие плюс)
 --25. Показать среднеарифметическую цену продажи всех книг.
+SELECT AVG(Sales.SalePrice) AS [Average selling price of all books] FROM Sales;
 --26. Показать тематики книг и сумму страниц по каждой из них. 
+SELECT Category.CategotyName, SUM(Book.NumberPages)
+	FROM Book LEFT OUTER JOIN Category ON Book.CategoryId=Category.Id
+	GROUP BY Category.CategotyName;
 --27. Вывести количество книг и сумму страниц этих книг по каждому из первых трех (!) авторов в базе данных. 
---28. Вывести информацию о книгах по "Computer Science" с наибольшим количеством страниц. 
+--28. Вывести информацию о книгах по "Computer Science" с наибольшим количеством страниц.
+SELECT TOP(1) *FROM Book WHERE Book.Description='Навчальний посібник' ORDER BY Book.NumberPages DESC;
 --29. Показать авторов и самую старую книгу по каждому из них. 
+SELECT Author.AuthorName, Book.BookName, Book.PublishDate 
+	FROM Book LEFT OUTER JOIN Author ON Book.AuthorId=Author.Id
+	ORDER BY Author.AuthorName, Book.PublishDate;
+
 --30. Показать на экран среднее количество страниц по каждой из тематик, при этом показать только тематики, 
 --в которых среднее количество более 400. 
 --31. Показать на экран сумму страниц по каждой из тематик, 
