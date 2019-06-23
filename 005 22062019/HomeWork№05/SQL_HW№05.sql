@@ -9,11 +9,45 @@ SELECT @count=COUNT(*)FROM Shop WHERE NOT EXISTS (SELECT *FROM Sales WHERE Shop.
 RETURN @count
 END
 GO
-PRINT (dbo.ShopNoSales())
---2. Функцию, которая возвращает минимальный из трех параметров.
+PRINT ('Кількість магазинів нереалізувавших жодної книги: '+CONVERT(NVARCHAR(MAX),dbo.ShopNoSales()))
 
---. Функцию, которая возвращает список книг, которые соответствуют набору критериев (имя и фамилия автора, тематика), 
---и отсортированы по фамилии автора в указанном в 4-м параметре направлении. 
+--2. Функцию, которая возвращает минимальный из трех параметров.
+GO
+CREATE FUNCTION MinNum(@num1 INT, @num2 INT, @num3 INT) RETURNS INT
+AS
+BEGIN
+RETURN (
+		SELECT MIN(mt.num )
+		FROM (SELECT @num1 'num' UNION
+		SELECT @num2 UNION
+		SELECT @num3)mt)		
+END
+PRINT 'Min number = '+CONVERT(NVARCHAR(MAX),dbo.MinNum(15,11,99))
+
+		--3. Функцию, которая возвращает список книг, которые соответствуют набору критериев (имя и фамилия автора, тематика), 
+		--и отсортированы по фамилии автора в указанном в 4-м параметре направлении. 
+GO
+CREATE FUNCTION AuthorBook (@author NVARCHAR(MAX), @category NVARCHAR(MAX), @sort INT) RETURNS TABLE
+AS
+BEGIN
+IF(@sort=1)
+RETURN(SELECT Book.BookName, Author.AuthorName, Category.CategoryName FROM (Book JOIN Author ON Book.AuthorId=Author.Id)
+JOIN Category ON Book.CategoryId=Category.Id
+GROUP BY Book.BookName, Author.AuthorName, Category.CategoryName
+ORDER BY Author.AuthorName)
+IF (@sort=0)
+RETURN(SELECT TOP(1)Book.BookName, Author.AuthorName, Category.CategoryName FROM (Book JOIN Author ON Book.AuthorId=Author.Id)
+JOIN Category ON Book.CategoryId=Category.Id
+GROUP BY Book.BookName, Author.AuthorName, Category.CategoryName
+ORDER BY Author.AuthorName DESC)
+IF (@sort<>0 AND @sort<>1)
+RETURN(SELECT TOP(1)Book.BookName, Author.AuthorName, Category.CategoryName FROM (Book JOIN Author ON Book.AuthorId=Author.Id)
+JOIN Category ON Book.CategoryId=Category.Id
+GROUP BY Book.BookName, Author.AuthorName, Category.CategoryName)
+END
+GO
+PRINT (dbo.AuthorBook('Scott Rob','Childrens',1))
+
 
 
 ------------------------
@@ -23,127 +57,148 @@ PRINT (dbo.ShopNoSales())
 --¦ выведите отдельно последнюю запись; 
 --¦ выведите отдельно 5-ю запись с конца; 
 --¦ выведите отдельно 3-ю запись с начала. 
+GO
+DECLARE CategoryAuthor CURSOR LOCAL SCROLL DYNAMIC
+FOR SELECT Category.CategoryName, COUNT(DISTINCT Author.AuthorName) from Book, Author, Category 
+WHERE Book.AuthorId=Author.Id AND Book.CategoryId=Category.Id
+GROUP BY Category.CategoryName
+DECLARE @category nvarchar(max), @count int;
+OPEN CategoryAuthor;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+PRINT 'Category: '+@category+'  COUNT '+CONVERT(NVARCHAR(MAX),@count)
+FETCH NEXT FROM CategoryAuthor INTO @category, @count
+END
+PRINT '-----------------------------------------------'
+PRINT 'Остання позиція'
+FETCH LAST FROM CategoryAuthor INTO @category, @count;
+PRINT 'Category: '+@category+'  COUNT '+CONVERT(NVARCHAR(MAX),@count)
+PRINT 'Третя позиція з кінця'
+FETCH RELATIVE -2 FROM CategoryAuthor INTO @category, @count;
+PRINT 'Category: '+@category+'  COUNT '+CONVERT(NVARCHAR(MAX),@count)
+PRINT 'Третя позиція з початку'
+FETCH ABSOLUTE 3 FROM CategoryAuthor INTO @category, @count;
+PRINT 'Category: '+@category+'  COUNT '+CONVERT(NVARCHAR(MAX),@count)
+CLOSE CategoryAuthor
 
-
+DEALLOCATE CategoryAuthor;
 
 --Написать следующие триггеры: 
 --1. Триггер, который при продаже книги автоматически изменяет количество книг в таблице Books. 
 --(Примечание Добавить в таблице Books необходимое поле количества имеющихся книг QuantityBooks). 
+ALTER TABLE Book ADD QuantityBooks INT 
+Update Book Set QuantityBooks=200 From Book
+
+GO
+CREATE TRIGGER QuantityBooks ON Sales INSTEAD OF INSERT AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @dateSale DATE, @amountToSale INT, @salePrice MONEY, @quantityBooks INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice = SalePrice FROM inserted;
+SELECT @quantityBooks = Book.QuantityBooks FROM Book WHERE Book.Id=@bookid;
+INSERT INTO Sales VALUES (@shopId, @bookId, @dateSale, @amountToSale, @salePrice)
+UPDATE Book SET Book.QuantityBooks-=@amountToSale FROM inserted WHERE Book.id=@bookId
+END
+
 --2. Триггер на проверку, чтобы количество продаж книг не превысила имеющуюся. 
---3. Триггер, который при удалении книги, копирует данные о ней в отдельную таблицу "DeletedBooks". 
+GO
+CREATE TRIGGER SalesAmount ON Sales FOR INSERT, UPDATE AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @dateSale DATE, @amountToSale INT, @salePrice MONEY, @quantityBooks INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice = SalePrice FROM inserted;
+SELECT @quantityBooks = Book.QuantityBooks FROM Book WHERE Book.Id=@bookid;
+UPDATE Book SET Book.QuantityBooks-=@amountToSale FROM inserted WHERE Book.id=@bookId
+IF(@quantityBooks<@amountToSale)
+	ROLLBACK TRAN
+END
+
+		--3. Триггер, который при удалении книги, копирует данные о ней в отдельную таблицу "DeletedBooks". 
+GO
+CREATE TRIGGER DeleteBook ON Sales
+INSTEAD OF INSERT AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @price MONEY, @dateSale DateTime, @salePrice money, @amountToSale INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @price = Price FROM Book WHERE Id = @bookId;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice=SalePrice from inserted
+IF(@price > @salePrice)
+    RAISERROR('SalePrice < Price', 0,1, @@ROWCOUNT)
+ELSE
+    BEGIN
+    INSERT INTO Sales VALUES (@shopId, @bookId, @dateSale, @amountToSale, @salePrice);
+    RAISERROR('OK!!! Inserted', 0,1, @@ROWCOUNT)
+    END
+END
+
 --4. Триггер, который следит, чтобы цена продажи книги не была меньше основной цены книги из таблицы Books. 
---5. Триггер, запрещающий добавления новой книги, для которой не указана дата выпуска и выбрасывает 
---соответствующее сообщение об ошибке. 
---6. Добавьте к базе данных триггер, который выполняет аудит изменений данных в таблице Books.
+GO
+CREATE TRIGGER SaleInsert ON Sales
+INSTEAD OF INSERT AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @price MONEY, @dateSale DateTime, @salePrice money, @amountToSale INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @price = Price FROM Book WHERE Id = @bookId;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice=SalePrice from inserted
+IF(@price > @salePrice)
+    RAISERROR('SalePrice < Price', 0,1, @@ROWCOUNT)
+ELSE
+    BEGIN
+    INSERT INTO Sales VALUES (@shopId, @bookId, @dateSale, @amountToSale, @salePrice);
+    RAISERROR('OK!!! Inserted', 0,1, @@ROWCOUNT)
+    END
+END
+		--5. Триггер, запрещающий добавления новой книги, для которой не указана дата выпуска и выбрасывает 
+		--соответствующее сообщение об ошибке. 
+GO
+CREATE TRIGGER AddBookNotDAta ON Sales
+INSTEAD OF INSERT AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @price MONEY, @dateSale DateTime, @salePrice money, @amountToSale INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @price = Price FROM Book WHERE Id = @bookId;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice=SalePrice from inserted
+IF(@price > @salePrice)
+    RAISERROR('SalePrice < Price', 0,1, @@ROWCOUNT)
+ELSE
+    BEGIN
+    INSERT INTO Sales VALUES (@shopId, @bookId, @dateSale, @amountToSale, @salePrice);
+    RAISERROR('OK!!! Inserted', 0,1, @@ROWCOUNT)
+    END
+END
 
-
-
-
-go
-create function CountSales(@category nvarchar(max)) returns INT
-as
-begin
-declare @count int
-select @count=Count(*) From Book Join Category ON Book.CategoryId=Category.Id
-WHERE Category.CategoryName=@category
-return @count
-end
-
-go
-print (dbo.CountSales('Childrens'))
-
-go
-create function SalesPrice(@bookId int) returns money
-as
-begin
-declare @price int
-select @price=Book.Price*1.1 From Book
-WHERE Book.Id=@bookId
-return @price
-end
-
---drop function dbo.SalesPrice
-go
-CREATE TABLE SalesPr
-(
-Id INT PRIMARY KEY NOT NULL IDENTITY,
-ShopId INT NOT NULL,
-BookId INT NOT NULL,
-DateSale Date NOT NULL,
-Amount INT NOT NULL,
-SalePrice as dbo.SalesPrice(BookId),
-CONSTRAINT Fk_SalesPr_Shop Foreign Key (ShopId) REFERENCES Shop(Id),
-CONSTRAINT Fk_SalesPr_Book Foreign Key (BookId) REFERENCES Book(Id),
-);
-select *from Book
-select *from SalesPr
-Insert Into SalesPr Values
-(1,1,'12.10.2017',5),
-(2,2,GetDate(),5),
-(1,3,GetDate(),3),
-(2,4,GetDate(),2),
-(2,5,GetDate(),7),
-(2,6,GetDate(),10),
-(2,7,GetDate(),5),
-(1,8,GetDate(),3),
-(2,9,GetDate(),2),
-(2,10,GetDate(),7),
-(2,11,GetDate(),10);
-
-------TRIGERS-------------
-go
-create trigger SaleInsert on Sales
-instead of INSERT
-as
----inserted
----@@rowcount
-begin
-declare @bookId INT;
-select @bookId = BookId FROM inserted
-
-declare @price money
-select @price = Price FROM Book Where Id = @bookId;
-
-declare @tmp money
-select @tmp=SalePrice from inserted
-if(@price > @tmp)
-    raiserror('SalePrice < Price', 0,1, @@rowcount)
-else
-    begin
-    declare @shopId int, @dateSale DateTime, @salePrice money, @amountToSale INT;
-    Select @shopId = ShopId FROM inserted;
-    Select @dateSale = DateSale FROM inserted;
-    Select @salePrice = SalePrice FROM inserted;
-	Select @amountToSale = Amount FROM inserted;
-    insert into Sales values (@shopId, @bookId, @dateSale, @amountToSale, @salePrice);
-    raiserror('OK!!! Inserted', 0,1, @@rowcount)
-    end
-end
-
- insert into Sales values (3, 1, GetDate(), 1, 250.5);
- select *from Sales
- ----------INDEXES----------------
- ----------FULLTEXT---------------
- go
- create fulltext catalog Text_Box as default 
- create unique index in_BookId on dbo.Book(Id)
- create fulltext index on dbo.Book(BookName, Description)
- key index in_BookId
- on Text_Box
-
- ------------CURSORS---------------------
- GO
- declare CategoryBook cursor 
- for select BookName, Category.CategoryName from Book, Category Where Book.CategoryId=Category.Id
- declare @name nvarchar(max), @cat nvarchar(max);
- open CategoryBook;
- fetch next from CategoryBook into @name, @cat;
- print 'Name Book: '+@name+'  Category '+@cat
- while @@FETCH_STATUS = 0
- begin
- fetch next from CategoryBook into @name, @cat;
- print 'Name Book: '+@name+'  Category '+@cat
- end
- close CategoryBook;
- deallocate CategoryBook;
- go
+		--6. Добавьте к базе данных триггер, который выполняет аудит изменений данных в таблице Books.
+GO
+CREATE TRIGGER BookTable ON Sales
+INSTEAD OF INSERT AS
+BEGIN
+DECLARE @shopId INT, @bookId INT, @price MONEY, @dateSale DateTime, @salePrice money, @amountToSale INT;
+SELECT @shopId = ShopId FROM inserted;
+SELECT @bookId = BookId FROM inserted
+SELECT @dateSale = DateSale FROM inserted;
+SELECT @price = Price FROM Book WHERE Id = @bookId;
+SELECT @amountToSale = Amount FROM inserted;
+SELECT @salePrice=SalePrice from inserted
+IF(@price > @salePrice)
+    RAISERROR('SalePrice < Price', 0,1, @@ROWCOUNT)
+ELSE
+    BEGIN
+    INSERT INTO Sales VALUES (@shopId, @bookId, @dateSale, @amountToSale, @salePrice);
+    RAISERROR('OK!!! Inserted', 0,1, @@ROWCOUNT)
+    END
+END
